@@ -24,7 +24,7 @@ import { StringEnum } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext, Theme } from "@mariozechner/pi-coding-agent";
 import { DynamicBorder } from "@mariozechner/pi-coding-agent";
 import { Container, matchesKey, Text, truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import { applyExtensionDefaults } from "./themeMap.ts";
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -326,8 +326,8 @@ export default function (pi: ExtensionAPI) {
 		applyExtensionDefaults(import.meta.url, ctx);
 		reconstructState(ctx);
 	});
-	pi.on("session_switch", async (_event, ctx) => reconstructState(ctx));
-	pi.on("session_fork", async (_event, ctx) => reconstructState(ctx));
+	pi.on("session_before_switch", async (_event, ctx) => { reconstructState(ctx); });
+	pi.on("session_before_fork", async (_event, ctx) => { reconstructState(ctx); });
 	pi.on("session_tree", async (_event, ctx) => reconstructState(ctx));
 
 	// ── Blocking gate ──────────────────────────────────────────────────

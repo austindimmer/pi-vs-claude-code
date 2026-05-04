@@ -15,7 +15,7 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { DynamicBorder } from "@mariozechner/pi-coding-agent";
 import { Container, Text } from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 const { spawn } = require("child_process") as any;
 import * as fs from "fs";
 import * as os from "os";
@@ -179,7 +179,7 @@ export default function (pi: ExtensionAPI) {
 				}
 			});
 
-			proc.on("close", (code) => {
+			proc.on("close", (code: number | null) => {
 				if (buffer.trim()) processLine(state, buffer);
 				clearInterval(timer);
 				state.elapsed = Date.now() - startTime;
@@ -190,7 +190,7 @@ export default function (pi: ExtensionAPI) {
 				const result = state.textChunks.join("");
 				ctx.ui.notify(
 					`Subagent #${state.id} ${state.status} in ${Math.round(state.elapsed / 1000)}s`,
-					state.status === "done" ? "success" : "error"
+					state.status === "done" ? "info" : "error"
 				);
 
 				pi.sendMessage({
@@ -202,7 +202,7 @@ export default function (pi: ExtensionAPI) {
 				resolve();
 			});
 
-			proc.on("error", (err) => {
+			proc.on("error", (err: Error) => {
 				clearInterval(timer);
 				state.status = "error";
 				state.proc = undefined;
@@ -217,6 +217,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "subagent_create",
+		label: "Subagent Create",
 		description: "Spawn a background subagent to perform a task. Returns the subagent ID immediately while it runs in the background. Results will be delivered as a follow-up message when finished.",
 		parameters: Type.Object({
 			task: Type.String({ description: "The complete task description for the subagent to perform" }),
@@ -242,12 +243,14 @@ export default function (pi: ExtensionAPI) {
 
 			return {
 				content: [{ type: "text", text: `Subagent #${id} spawned and running in background.` }],
+				details: undefined,
 			};
 		},
 	});
 
 	pi.registerTool({
 		name: "subagent_continue",
+		label: "Subagent Continue",
 		description: "Continue an existing subagent's conversation. Use this to give further instructions to a finished subagent. Returns immediately while it runs in the background.",
 		parameters: Type.Object({
 			id: Type.Number({ description: "The ID of the subagent to continue" }),
@@ -257,10 +260,10 @@ export default function (pi: ExtensionAPI) {
 			widgetCtx = ctx;
 			const state = agents.get(args.id);
 			if (!state) {
-				return { content: [{ type: "text", text: `Error: No subagent #${args.id} found.` }] };
+				return { content: [{ type: "text", text: `Error: No subagent #${args.id} found.` }], details: undefined };
 			}
 			if (state.status === "running") {
-				return { content: [{ type: "text", text: `Error: Subagent #${args.id} is still running.` }] };
+				return { content: [{ type: "text", text: `Error: Subagent #${args.id} is still running.` }], details: undefined };
 			}
 
 			state.status = "running";
@@ -275,12 +278,14 @@ export default function (pi: ExtensionAPI) {
 
 			return {
 				content: [{ type: "text", text: `Subagent #${args.id} continuing conversation in background.` }],
+				details: undefined,
 			};
 		},
 	});
 
 	pi.registerTool({
 		name: "subagent_remove",
+		label: "Subagent Remove",
 		description: "Remove a specific subagent. Kills it if it's currently running.",
 		parameters: Type.Object({
 			id: Type.Number({ description: "The ID of the subagent to remove" }),
@@ -289,7 +294,7 @@ export default function (pi: ExtensionAPI) {
 			widgetCtx = ctx;
 			const state = agents.get(args.id);
 			if (!state) {
-				return { content: [{ type: "text", text: `Error: No subagent #${args.id} found.` }] };
+				return { content: [{ type: "text", text: `Error: No subagent #${args.id} found.` }], details: undefined };
 			}
 
 			if (state.proc && state.status === "running") {
@@ -300,17 +305,19 @@ export default function (pi: ExtensionAPI) {
 
 			return {
 				content: [{ type: "text", text: `Subagent #${args.id} removed successfully.` }],
+				details: undefined,
 			};
 		},
 	});
 
 	pi.registerTool({
 		name: "subagent_list",
+		label: "Subagent List",
 		description: "List all active and finished subagents, showing their IDs, tasks, and status.",
 		parameters: Type.Object({}),
 		execute: async () => {
 			if (agents.size === 0) {
-				return { content: [{ type: "text", text: "No active subagents." }] };
+				return { content: [{ type: "text", text: "No active subagents." }], details: undefined };
 			}
 
 			const list = Array.from(agents.values()).map(s => 
@@ -319,6 +326,7 @@ export default function (pi: ExtensionAPI) {
 
 			return {
 				content: [{ type: "text", text: `Subagents:\n${list}` }],
+				details: undefined,
 			};
 		},
 	});
@@ -460,7 +468,7 @@ export default function (pi: ExtensionAPI) {
 			const msg = total === 0
 				? "No subagents to clear."
 				: `Cleared ${total} subagent${total !== 1 ? "s" : ""}${killed > 0 ? ` (${killed} killed)` : ""}.`;
-			ctx.ui.notify(msg, total === 0 ? "info" : "success");
+			ctx.ui.notify(msg, "info");
 		},
 	});
 
